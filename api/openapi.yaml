@@ -1,0 +1,557 @@
+openapi: "3.0.3"
+info:
+  title: Service Template API
+  version: "1.0.0"
+  description: Go microservice template implementing hexagonal architecture
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: health
+    description: Health probe endpoints
+  - name: users
+    description: User management
+  - name: accounts
+    description: Account management
+
+paths:
+  /health/live:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      operationId: healthLive
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /health/ready:
+    get:
+      tags: [health]
+      summary: Readiness probe
+      operationId: healthReady
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /users:
+    get:
+      tags: [users]
+      summary: List all users
+      operationId: listUsers
+      parameters:
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageAfter"
+        - $ref: "#/components/parameters/PageBefore"
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: "#/components/schemas/UserListDocument"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+    post:
+      tags: [users]
+      summary: Create a user
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: "#/components/schemas/CreateUserDocument"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: "#/components/schemas/UserDocument"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+
+    get:
+      tags: [users]
+      summary: Get a user by ID
+      operationId: getUser
+      responses:
+        "200":
+          description: User found
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: "#/components/schemas/UserDocument"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags: [users]
+      summary: Update a user
+      operationId: updateUser
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserDocument"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: "#/components/schemas/UserDocument"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+    delete:
+      tags: [users]
+      summary: Delete a user
+      operationId: deleteUser
+      responses:
+        "204":
+          description: User deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{userID}/accounts:
+    parameters:
+      - name: userID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [accounts]
+      summary: List accounts for a user
+      operationId: listUserAccounts
+      parameters:
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageAfter"
+        - $ref: "#/components/parameters/PageBefore"
+      responses:
+        "200":
+          description: List of accounts
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: "#/components/schemas/AccountListDocument"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+    post:
+      tags: [accounts]
+      summary: Create an account for a user
+      operationId: createAccount
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: "#/components/schemas/CreateAccountDocument"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: "#/components/schemas/AccountDocument"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /accounts/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+
+    get:
+      tags: [accounts]
+      summary: Get an account by ID
+      operationId: getAccount
+      responses:
+        "200":
+          description: Account found
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: "#/components/schemas/AccountDocument"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags: [accounts]
+      summary: Update an account
+      operationId: updateAccount
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: "#/components/schemas/UpdateAccountDocument"
+      responses:
+        "200":
+          description: Account updated
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: "#/components/schemas/AccountDocument"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [accounts]
+      summary: Delete an account
+      operationId: deleteAccount
+      responses:
+        "204":
+          description: Account deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  parameters:
+    ResourceID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    PageSize:
+      name: "page[size]"
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    PageAfter:
+      name: "page[after]"
+      in: query
+      required: false
+      description: Opaque cursor for the next page, obtained from links.next
+      schema:
+        type: string
+
+    PageBefore:
+      name: "page[before]"
+      in: query
+      required: false
+      description: Opaque cursor for the previous page, obtained from links.prev
+      schema:
+        type: string
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+        detail:
+          type: string
+
+    UserAttributes:
+      type: object
+      required: [email, name, created_at, updated_at]
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateUserAttributes:
+      type: object
+      required: [email, name]
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          minLength: 1
+
+    UpdateUserAttributes:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          minLength: 1
+
+    UserResource:
+      type: object
+      required: [id, type, attributes]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [users]
+        attributes:
+          $ref: "#/components/schemas/UserAttributes"
+
+    CreateUserResource:
+      type: object
+      required: [type, attributes]
+      properties:
+        type:
+          type: string
+          enum: [users]
+        attributes:
+          $ref: "#/components/schemas/CreateUserAttributes"
+
+    UpdateUserResource:
+      type: object
+      required: [type, attributes]
+      properties:
+        type:
+          type: string
+          enum: [users]
+        attributes:
+          $ref: "#/components/schemas/UpdateUserAttributes"
+
+    UserDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/UserResource"
+
+    CollectionLinks:
+      type: object
+      required: [next, prev]
+      properties:
+        next:
+          type: string
+          nullable: true
+          description: URL of the next page, or null if this is the last page
+        prev:
+          type: string
+          nullable: true
+          description: URL of the previous page, or null if this is the first page
+
+    UserListDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserResource"
+        links:
+          $ref: "#/components/schemas/CollectionLinks"
+
+    CreateUserDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/CreateUserResource"
+
+    UpdateUserDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/UpdateUserResource"
+
+    AccountAttributes:
+      type: object
+      required: [user_id, name, balance, currency, created_at, updated_at]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        balance:
+          type: integer
+          format: int64
+          description: Balance in smallest currency unit (e.g. cents)
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateAccountAttributes:
+      type: object
+      required: [name, currency]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+
+    UpdateAccountAttributes:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+
+    AccountResource:
+      type: object
+      required: [id, type, attributes]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [accounts]
+        attributes:
+          $ref: "#/components/schemas/AccountAttributes"
+
+    CreateAccountResource:
+      type: object
+      required: [type, attributes]
+      properties:
+        type:
+          type: string
+          enum: [accounts]
+        attributes:
+          $ref: "#/components/schemas/CreateAccountAttributes"
+
+    UpdateAccountResource:
+      type: object
+      required: [type, attributes]
+      properties:
+        type:
+          type: string
+          enum: [accounts]
+        attributes:
+          $ref: "#/components/schemas/UpdateAccountAttributes"
+
+    AccountDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/AccountResource"
+
+    AccountListDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountResource"
+        links:
+          $ref: "#/components/schemas/CollectionLinks"
+
+    CreateAccountDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/CreateAccountResource"
+
+    UpdateAccountDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/UpdateAccountResource"
+
+    ErrorObject:
+      type: object
+      required: [status, title]
+      properties:
+        status:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+
+    ErrorDocument:
+      type: object
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorObject"
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: "#/components/schemas/ErrorDocument"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: "#/components/schemas/ErrorDocument"
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: "#/components/schemas/ErrorDocument"
+
+    UnprocessableEntity:
+      description: Validation error
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: "#/components/schemas/ErrorDocument"

@@ -1,0 +1,31 @@
+version: "2"
+
+run:
+  build-tags:
+    - integration
+
+formatters:
+  enable:
+    - goimports
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - revive
+    - exhaustive
+  settings:
+    revive:
+      rules:
+        - name: var-naming
+        - name: package-comments
+          disabled: true
+        - name: exported
+          disabled: true
+        - name: unused-parameter
+  exclusions:
+    rules:
+      - path: '_test\.go'
+        linters:
+          - errcheck

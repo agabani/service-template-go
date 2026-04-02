@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build: .
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/app?sslmode=disable
+      HTTP_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["serve"]
+
+  hyperdx:
+    image: hyperdx/hyperdx-local
+    profiles: [observability]
+    ports:
+      - 4317:4317 # OpenTelemetry gRPC endpoint
+      - 4318:4318 # OpenTelemetry HTTP endpoint
+      - 8000:8000 # Private HyperDX API for the UI
+      - 8002:8002 # HyperDX HTTP Logging Endpoint
+      - 8081:8080 # HyperDX UI (Next.js)
+
+volumes:
+  postgres_data:
